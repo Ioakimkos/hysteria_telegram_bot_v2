@@ -1,10 +1,7 @@
 from __future__ import annotations
-
-import logging
-import subprocess
+import subprocess, logging
 from typing import Sequence
 import telebot
-
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,26 +12,14 @@ def is_admin(user_id: int) -> bool:
 
 def run_cli_command(args: Sequence[str]) -> str:
     try:
-        result = subprocess.run(
-            list(args),
-            capture_output=True,
-            text=True,
-            timeout=settings.command_timeout,
-            check=False,
-        )
+        p = subprocess.run(list(args), capture_output=True, text=True, timeout=settings.command_timeout, check=False)
     except subprocess.TimeoutExpired:
         return 'Error: command timed out'
     except Exception as e:
-        logger.exception('Failed to execute command')
+        logger.exception('Command failed')
         return f'Error: {e}'
-
-    output = (result.stdout or '').strip()
-    error = (result.stderr or '').strip()
-
-    if result.returncode != 0:
-        if error:
-            return f'Error:\n{error}'
-        if output:
-            return f'Error:\n{output}'
-        return f'Error: exit code {result.returncode}'
-    return output or 'OK'
+    out = (p.stdout or '').strip()
+    err = (p.stderr or '').strip()
+    if p.returncode != 0:
+        return f"Error:\n{err or out or ('exit code ' + str(p.returncode))}"
+    return out or 'OK'
